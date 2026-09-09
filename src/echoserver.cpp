@@ -27,7 +27,7 @@ int main(){
         exit(EXIT_FAILURE);
     }
 
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));//sets server fd q
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -38,7 +38,7 @@ int main(){
         exit(EXIT_FAILURE);
     }
 
-    if(listen(server_fd, 3) < 0){
+    if(listen(server_fd, 3) < 0){//listen with backlog 3
         perror("Listen Failed");
         exit(EXIT_FAILURE);
     }  
@@ -66,9 +66,22 @@ int main(){
 
             std::cout.write(buffer, numByte);
 
-            if(write(clientfd, buffer, numByte) < 0){
+            ssize_t wNumByte = write(clientfd, buffer, numByte);
+            if(wNumByte < 0){
                 perror("write failed");
+            }else{
+                while(wNumByte < numByte){//If not enough bytes went through, keep looping through the message and send parts of it until it all sends.
+                    ssize_t remain = numByte - wNumByte;
+                    ssize_t written = write(clientfd, (buffer + wNumByte), remain);
+                    if(written >=0){
+                        wNumByte += written;
+                    }else if(written < 0){
+                        break;
+                    }
+                } 
             }
+            
+
         }
         close(clientfd);
     }
