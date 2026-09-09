@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <csignal>
 
 #define PORT 8080
 
@@ -12,11 +13,7 @@
 
 
 int main(){
-    int amnt;
-
-    std::cout << "Loop amount: ";
-    std::cin >> amnt;
-
+    signal(SIGPIPE, SIG_IGN);
     int opt = 1;
     struct sockaddr_in address;
 
@@ -44,11 +41,9 @@ int main(){
     if(listen(server_fd, 3) < 0){
         perror("Listen Failed");
         exit(EXIT_FAILURE);
-    }
+    }  
 
-    int i = 0;  
-
-    while(i < amnt){
+    while(true){
 
         int clientfd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
 
@@ -57,20 +52,24 @@ int main(){
             exit(EXIT_FAILURE);
         }
 
-        ssize_t numByte = read(clientfd, buffer, sizeof(buffer));
+        while(true){
 
-        if(numByte < 0){
-            perror("Read Error");
-            exit(EXIT_FAILURE);
+            ssize_t numByte = read(clientfd, buffer, sizeof(buffer));
+
+            if(numByte < 0){
+                perror("Read Failed");
+                exit(EXIT_FAILURE);
+            }
+            if(numByte == 0){
+                break;
+            }
+
+            std::cout.write(buffer, numByte);
+
+            if(write(clientfd, buffer, numByte) < 0){
+                perror("write failed");
+            }
         }
-
-        std::cout.write(buffer, numByte);
-
-        if(write(clientfd, buffer, numByte) < 0){
-            perror("write failed");
-            exit(EXIT_FAILURE);
-        }
-        i++;
         close(clientfd);
     }
     
