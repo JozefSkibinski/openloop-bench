@@ -64,7 +64,7 @@ int main(){
                 break;
             }
 
-            std::cout.write(buffer, numByte);
+            std::cout.write(buffer, numByte) << std::flush;
 
             ssize_t wNumByte = write(clientfd, buffer, numByte);
             if(wNumByte < 0){
@@ -85,10 +85,6 @@ int main(){
         }
         close(clientfd);
     }
-    
-    
     close(server_fd);
-
-
     return 0;
 }
