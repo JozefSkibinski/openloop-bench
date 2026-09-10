@@ -1,0 +1,21 @@
+# Build output
+build/
+build-asan/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.o
+*.a
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+compile_commands.json
+
+# Large raw benchmark dumps — commit the small ones deliberately
+results/*_10M.csv
