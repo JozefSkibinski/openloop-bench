@@ -1,0 +1,5 @@
+timestamp,machine,os,count,msg_bytes,mode,target_rate,stall_ms,stall_every,duration_s,throughput_rps,errors,min_us,p50_us,p99_us,p999_us,p9999_us,p99999_us,max_us,avg_us
+2026-09-10,Jozefs-MacBook-Air.local,macOS,10,4,,,,,0.000444333,22505.6,,34,38,74,74,74,74,74,43
+2026-09-10,Jozefs-MacBook-Air.local,macOS,10,4,,,,,0.000619292,16147.5,,57,61,71,71,71,71,71,61
+2026-09-10|16:55:23,Jozefs-MacBook-Air.local,macOS,1000000,26,,,,,16.083,62177.5,,8,15,36,57,196,1787,3899,15
+2026-09-10|17:43:38,Jozefs-MacBook-Air.local,macOS,1000000,26,,,,,16.0445,62326.5,,8,14,36,59,235,1863,7656,15

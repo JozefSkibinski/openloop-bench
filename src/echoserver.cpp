@@ -6,13 +6,29 @@
 #include <string.h>
 #include <errno.h>
 #include <csignal>
-
-#define PORT 8080
-
+#include <cstdlib>
 
 
 
-int main(){
+
+
+int main(int argc, char* argv[]){
+    int PORT;
+    //int stall_ms;
+    //int stall_every;
+    
+    for(int i = 0; i < argc; i++){
+        if(strcmp(argv[i], "--port") == 0){
+            PORT = atoi(argv[i+1]);
+        }
+        /*if(strcmp(argv[i], "--stall-ms") == 0){
+            stall_ms = atoi(argv[i+1]);
+        }
+        if(strcmp(argv[i], "--stall-every-sec") == 0){
+            stall_every = atoi(argv[i+1]);
+        }*/
+    }
+
     signal(SIGPIPE, SIG_IGN);
     int opt = 1;
     struct sockaddr_in address;
