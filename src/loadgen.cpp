@@ -118,11 +118,15 @@ int main(int argc, char* argv[]){
     size_t msgRem;
     ssize_t writeRem;
     ssize_t writeRead;
+
     latency.reserve(numIter);
+
     auto startDur = std::chrono::steady_clock::now();
+
     while(i < numIter){
         auto start = std::chrono::steady_clock::now();
         ssize_t writeLen = write(client_fd, msg, msgLen);
+
         if(writeLen <= 0){
             perror("write failed");
             exit(EXIT_FAILURE);
@@ -130,6 +134,7 @@ int main(int argc, char* argv[]){
             while(writeLen < msgLen){
                 writeRem = msgLen - writeLen;
                 writeRead= write(client_fd, msg + writeLen, writeRem);
+
                 if(writeRead > 0){
                     writeLen += writeRead;
                 }else{
@@ -138,6 +143,7 @@ int main(int argc, char* argv[]){
             }
         }
         int recLen = read(client_fd, buffer, msgLen);
+        
         if(recLen <= 0){
             perror("Read failed");
             exit(EXIT_FAILURE);

@@ -7,26 +7,31 @@
 #include <errno.h>
 #include <csignal>
 #include <cstdlib>
-
-
-
+#include <chrono>
+#include <thread>
 
 
 int main(int argc, char* argv[]){
-    int PORT;
-    //int stall_ms;
-    //int stall_every;
+    int PORT = 8080;
+    int stall_ms = 0;
+    int stall_every = 0;
+    auto wake = std::chrono::steady_clock::now();
+    bool hasArgs = true;
     
     for(int i = 0; i < argc; i++){
         if(strcmp(argv[i], "--port") == 0){
             PORT = atoi(argv[i+1]);
         }
-        /*if(strcmp(argv[i], "--stall-ms") == 0){
+        if(strcmp(argv[i], "--stall-ms") == 0){
             stall_ms = atoi(argv[i+1]);
         }
         if(strcmp(argv[i], "--stall-every-sec") == 0){
-            stall_every = atoi(argv[i+1]);
-        }*/
+            stall_every = atoi(argv[i+1]) * 1000;
+        }
+    }
+
+    if((stall_ms == 0) || (stall_every == 0)){
+        hasArgs = false; 
     }
 
     signal(SIGPIPE, SIG_IGN);
@@ -60,7 +65,6 @@ int main(int argc, char* argv[]){
     }  
 
     while(true){
-
         int clientfd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
 
         if(clientfd < 0){
@@ -69,6 +73,13 @@ int main(int argc, char* argv[]){
         }
 
         while(true){
+            if(hasArgs == true){
+                auto wakeInt = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - wake);
+                if(stall_every <= wakeInt.count()){
+                    std::this_thread::sleep_for(std::chrono::milliseconds(stall_ms));
+                    wake = std::chrono::steady_clock::now();
+                }                
+            }
 
             ssize_t numByte = read(clientfd, buffer, sizeof(buffer));
 
@@ -96,8 +107,6 @@ int main(int argc, char* argv[]){
                     }
                 } 
             }
-            
-
         }
         close(clientfd);
     }
