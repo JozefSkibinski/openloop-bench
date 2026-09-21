@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iomanip>
 #include <filesystem>
+#include <thread>
 
 
 
@@ -32,7 +33,7 @@ std::string get_timestamp() {
 
     std::ostringstream oss;
 
-    oss << std::put_time(tm, "%Y-%m-%d|%H:%M:%S");
+    oss << std::put_time(tm, "%Y-%m-%dT%H:%M:%S");
 
     return oss.str();
 }
@@ -60,8 +61,6 @@ std::string get_os() {
         return "Linux";
     #elif defined(__APPLE__)
         return "macOS";
-    #elif defined(__FreeBSD__)
-        return "FreeBSD";
     #else
         return "Unknown";
     #endif
@@ -70,12 +69,49 @@ std::string get_os() {
 
 int main(int argc, char* argv[]){
     std::vector<long long> latency;
-
+    int ERRORS = 0;
     if(argc < 3){
-        perror("Not enough arguements");
+        std::cerr << "Not enough arguements\n";
         exit(EXIT_FAILURE);
     }
     
+    int stall_ms = 0;
+    int stall_every = 0;
+    bool openMode = false;
+    int rate = 0;
+    std::chrono::microseconds interval(0);
+    
+
+    for(int j = 1; j+1 < argc; j++){
+        if(strcmp(argv[j], "--stall-ms") == 0){
+            stall_ms = atoi(argv[j+1]);
+        }
+        if(strcmp(argv[j], "--stall-every-sec") == 0){
+            stall_every = atoi(argv[j+1]);
+        }
+        if(strcmp(argv[j], "--mode") == 0){
+            if((strcmp(argv[j+1], "open") == 0)){
+                openMode = true;
+            }else if((strcmp(argv[j+1], "closed") != 0)){
+                std::cerr << "Not a valid mode\n";
+                exit(EXIT_FAILURE);
+            }  
+        }
+        if(strcmp(argv[j], "--rate") == 0){
+                rate = atoi(argv[j+1]);
+        }
+        
+    }
+    if(openMode && rate <= 0){
+        std::cerr << "Open mode with no rate\n";
+        exit(EXIT_FAILURE);
+    }
+    if(stall_every == 0 || stall_ms == 0){
+        stall_ms = 0;
+        stall_every = 0;
+    }
+
+
 
     signal(SIGPIPE, SIG_IGN);
     struct sockaddr_in address{};
@@ -85,14 +121,14 @@ int main(int argc, char* argv[]){
     int client_fd = socket(AF_INET, SOCK_STREAM, 0);
     
     if(client_fd < 0){
-        perror("Socket Failed");
+        std::cerr << "Socket Failed\n";
         exit(EXIT_FAILURE);
     }
 
     int inetAddr = inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);//Change IP later
 
     if(inetAddr != 1){
-        std::cerr << "Internet Address";
+        std::cerr << "Internet Address\n";
         exit(EXIT_FAILURE);
     }
 
@@ -100,7 +136,7 @@ int main(int argc, char* argv[]){
     address.sin_port = htons(PORT);//Change this later to an argumen
 
     if(connect(client_fd, (struct sockaddr*)&address, sizeof(address)) < 0){
-        perror("Connection failed");
+        std::cerr << "Connection failed\n";
         exit(EXIT_FAILURE);
     }
 
@@ -111,7 +147,13 @@ int main(int argc, char* argv[]){
     
     int i = 0;
     int numIter = atoi(argv[1]);
-    if (numIter == 0){exit(EXIT_FAILURE);}
+
+    if(numIter <= 0){
+        std::cerr << "Count must be a positive integer\n";
+        return 1;
+    }
+
+    if (numIter == 0){ERRORS++;}
     int msgLen = strlen(argv[2]) + 1;
 
     ssize_t recRead;
@@ -123,13 +165,27 @@ int main(int argc, char* argv[]){
 
     auto startDur = std::chrono::steady_clock::now();
 
+    if(openMode == true){
+        interval = std::chrono::microseconds(1000000 / rate);
+    }
+    
+
     while(i < numIter){
-        auto start = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point measureFrom;
+
+        if(openMode == true){
+            
+            measureFrom = startDur + i * interval;
+            std::this_thread::sleep_until(measureFrom);
+        }else{
+            measureFrom = std::chrono::steady_clock::now();
+        }
+        
         ssize_t writeLen = write(client_fd, msg, msgLen);
 
         if(writeLen <= 0){
-            perror("write failed");
-            exit(EXIT_FAILURE);
+            std::cerr << "write failed\n";
+            ERRORS++;
         }else{
             while(writeLen < msgLen){
                 writeRem = msgLen - writeLen;
@@ -143,10 +199,10 @@ int main(int argc, char* argv[]){
             }
         }
         int recLen = read(client_fd, buffer, msgLen);
-        
+
         if(recLen <= 0){
-            perror("Read failed");
-            exit(EXIT_FAILURE);
+            std::cerr << "Read failed\n";
+            ERRORS++;
         }else{
             while(recLen < msgLen){
                 msgRem = msgLen - recLen;
@@ -158,32 +214,35 @@ int main(int argc, char* argv[]){
                 }
             }
         }
-        auto  end = std::chrono::steady_clock::now();
-        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);   
+        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - measureFrom);   
 
         latency.push_back(ms.count());
 
         i++;
     }
+
     auto endDur = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = endDur - startDur;
     
     long long max = 0;
     long long avg = 0;
     long long low = 0;
-    long long count = 0;
+
+    if(latency.empty()){
+        std::cerr << "No successful requests\n";
+        return 1;
+    }
 
     for(const auto& time: latency){
         avg += time;
-        count++;
     }
-
-    avg = avg/count;
+    
     std::sort(latency.begin(), latency.end());
     low = latency.front();
     max = latency.back();
 
     int size = latency.size();
+    avg = avg / size;
     double throughput = size / elapsed.count();
 
     int p50 = size / 2;
@@ -210,20 +269,29 @@ int main(int argc, char* argv[]){
             std::cerr << "Unable to open file\n";
         }
     }
+    
+    std::string modeS = "closed";
 
-    if(csvFile.is_open()){
-        csvFile << get_timestamp() << "," << get_machine_name() << "," << get_os() << "," << size << "," 
-        << msgLen << "," << "" << "," << "" <<  "," << "" <<  "," << "" << "," << elapsed.count() << ","
-        << throughput <<  "," << "" << "," << low << "," << latency[p50] << "," << latency[p99] << "," << latency[p999] << ","
-        << latency[phigh] << "," << latency[phighest] << "," << max << "," << avg << "\n";
-        csvFile.close();
-    }else{
-        std::cerr << "Unable to open file\n";
+\
+    if(openMode == true){
+        modeS = "open";
     }
-    
-    
+
+    csvFile << get_timestamp() << "," << get_machine_name() << "," << get_os() << ","
+        << size << "," << msgLen << "," << modeS << ",";
+
+    if(openMode){
+        csvFile << rate;
+    }
+
+    csvFile << "," << stall_ms << "," << stall_every << "," << elapsed.count() << ","
+        << throughput << "," << ERRORS << "," << low << "," << latency[p50] << ","
+        << latency[p99] << "," << latency[p999] << "," << latency[phigh] << ","
+        << latency[phighest] << "," << max << "," << avg << "\n";
 
     close(client_fd);
 
+
     return 0;
 }
+
