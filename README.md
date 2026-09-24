@@ -184,3 +184,15 @@ file is empty.
 | `avg_us` | mean |
 
 All latencies are in microseconds.
+
+## Roadmap
+
+- [x] Closed-loop mode with per-request timing
+- [x] Open-loop scheduling with due-time latency
+- [x] Configurable stall injection in the test server
+- [x] CSV output with run conditions recorded
+- [ ] Record scheduler lateness separately from server latency
+- [ ] `--out` flag for raw per-request latency dumps
+- [ ] Latency histogram and percentile curve charts
+- [ ] Multiple concurrent connections
+- [ ] `--duration` flag instead of a fixed request count
