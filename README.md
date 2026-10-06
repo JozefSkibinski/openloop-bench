@@ -91,28 +91,28 @@ Closed loop against a healthy server:
 $ ./run_benchmark.sh 3000000 Hello
 Average: 16 microseconds
 Lowest: 8 microseconds
-Highest: 4838 microseconds
+Highest: 2930 microseconds
 Median: 15 microseconds
 
 99th Percentile: 41 microseconds
-99.9th Percentile: 74 microseconds
-99.99th Percentile: 250 microseconds
-99.999th Percentile: 1626 microseconds
+99.9th Percentile: 70 microseconds
+99.99th Percentile: 237 microseconds
+99.999th Percentile: 1390 microseconds
 ```
 
 Open loop at 1,000 req/s against a server that freezes 200ms every second:
 
 ```
 $ ./run_benchmark.sh 60000 Hello 200 1 open 1000
-Average: 326 microseconds
-Lowest: 32 microseconds
-Highest: 18077 microseconds
+Average: 18609 microseconds
+Lowest: 34 microseconds
+Highest: 216461 microseconds
 Median: 274 microseconds
 
-99th Percentile: 1254 microseconds
-99.9th Percentile: 10538 microseconds
-99.99th Percentile: 14280 microseconds
-99.999th Percentile: 18077 microseconds
+99th Percentile: 193120 microseconds
+99.9th Percentile: 203577 microseconds
+99.99th Percentile: 211902 microseconds
+99.999th Percentile: 216461 microseconds
 ```
 Every run appends a row to `results/results.csv`.
 
