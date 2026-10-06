@@ -116,7 +116,7 @@ int main(int argc, char* argv[]){
     signal(SIGPIPE, SIG_IGN);
     struct sockaddr_in address{};
 
-    char buffer[1024] = {0};
+
 
     int client_fd = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -154,7 +154,8 @@ int main(int argc, char* argv[]){
     }
 
     if (numIter == 0){ERRORS++;}
-    int msgLen = strlen(argv[2]) + 1;
+    int msgLen = str.size();
+    std::vector<char> buffer(msgLen);
 
     ssize_t recRead;
     size_t msgRem;
@@ -198,7 +199,7 @@ int main(int argc, char* argv[]){
                 }
             }
         }
-        int recLen = read(client_fd, buffer, msgLen);
+        int recLen = read(client_fd, buffer.data(),msgLen);
 
         if(recLen <= 0){
             std::cerr << "Read failed\n";
@@ -206,7 +207,7 @@ int main(int argc, char* argv[]){
         }else{
             while(recLen < msgLen){
                 msgRem = msgLen - recLen;
-                recRead = read(client_fd, (buffer + recLen), msgRem);
+                recRead = read(client_fd, buffer.data()+recLen, msgRem);
                 if(recRead > 0){
                     recLen += recRead;
                 }else{
