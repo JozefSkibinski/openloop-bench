@@ -91,7 +91,6 @@ int main(int argc, char* argv[]){
                 break;
             }
 
-            std::cout.write(buffer, numByte) << std::flush;
 
             ssize_t wNumByte = write(clientfd, buffer, numByte);
             if(wNumByte < 0){
