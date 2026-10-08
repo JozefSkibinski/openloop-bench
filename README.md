@@ -2,7 +2,7 @@
 
 A TCP load generator that sends scheduled requests and measures the latency from when each request was due.
 
-Closed-loop benchmarking under reported p99 latency by more than 4,000x against a server with injected stalls.
+Closed-loop benchmarking under reported p99 latency by more than 8,000x against a server with injected stalls.
 
 ## The Problem
 
@@ -16,27 +16,27 @@ The percentiles are computed over a sample that excludes the slow requests. This
 
 ## Results
 
-All runs: single connection, 6-byte messages, loopback, macOS. Closed-loop runs sent 3,000,000 requests, while open-loop runs sent 60,000 requests. Each run lasted about 60 seconds, both modes saw the same number of injected stalls.
+All runs: single connection, 6-byte messages, loopback, macOS. Closed-loop runs sent 10,000,000 requests (about 2 to 2.5 minutes each), while open-loop runs sent 60,000 requests (60 seconds each). Stalls followed the same schedule in every run, so both modes spent the same share of time against a frozen server.
 
 ### Healthy server
 
 | mode | p50 | p99 | p99.9 | p99.99 | p99.999 | max | throughput |
 |---|---|---|---|---|---|---|---|
-| closed | 15µs | 41µs | 70µs | 237µs | 1.4ms | 2.9ms | 59,280 req/s |
-| open (1k/s) | 267µs | 4.4ms | 13.4ms | 23.5ms | 25.9ms | 25.9ms | 1,000 req/s |
+| closed | 12µs | 16µs | 22µs | 49µs | 104µs | 13.4ms | 81,302 req/s |
+| open (1k/s) | 264µs | 308µs | 1.7ms | 11.9ms | 14.6ms | 14.6ms | 1,000 req/s |
 
 ### Server stalling 200ms every 1s
 
 | mode | p50 | p99 | p99.9 | p99.99 | p99.999 | max | throughput |
 |---|---|---|---|---|---|---|---|
-| closed | 15µs | **45µs** | 78µs | 352µs | 205ms | 207ms | 48,036 req/s |
-| open (1k/s) | 274µs | **193ms** | 204ms | 212ms | 216ms | 216ms | 1,000 req/s |
+| closed | 12µs | **22µs** | 55µs | 92µs | 205ms | 210ms | 64,886 req/s |
+| open (1k/s) | 265µs | **193ms** | 203ms | 204ms | 204ms | 204ms | 1,000 req/s |
 
-The server was unresponsive for about 20% of each stalled run. Closed-loop reports a p99 of 45µs, four microseconds above its own health baseline of 41µs. Open-loop reports 193ms at the same percentile, a factor of abour 4,300.
+The server was unresponsive for about 20% of each stalled run. Closed-loop reports a p99 of 22µs, six microseconds above its own health baseline of 16µs. Open-loop reports 193ms at the same percentile, a factor of abour 8,800.
 
 Closed-loop doesn't ignore the stall entirely, it only shows at p99.999 (205ms), one smaple in 100,000. Under that, every other reported percentile looks healthy, since the requests that would have been slow were not sent.
 
-Throughput shows the same blind spot, but from the other side. The stalling server deliverd 48,036 req/s against 59,280 for the healthy one. This was a 19% drop that matches the 20% of clock time spent frozen. The latency percentiles report almost no change aswell.
+Throughput shows the same blind spot, but from the other side. The stalling server deliverd 64,886 req/s against 81,302 for the healthy one. This was a 20% drop that matches the 20% of clock time spent frozen. The latency percentiles report almost no change aswell.
 
 ## Usage
 
@@ -88,31 +88,31 @@ Starts the server, runs the load generator against it, and kills the server afte
 Closed loop against a healthy server:
 
 ```
-$ ./run_benchmark.sh 3000000 Hello
-Average: 16 microseconds
-Lowest: 8 microseconds
-Highest: 2930 microseconds
-Median: 15 microseconds
+$ ./run_benchmark.sh 10000000 Hello
+Average: 11 microseconds
+Lowest: 7 microseconds
+Highest: 13419 microseconds
+Median: 12 microseconds
 
-99th Percentile: 41 microseconds
-99.9th Percentile: 70 microseconds
-99.99th Percentile: 237 microseconds
-99.999th Percentile: 1390 microseconds
+99th Percentile: 16 microseconds
+99.9th Percentile: 22 microseconds
+99.99th Percentile: 49 microseconds
+99.999th Percentile: 104 microseconds
 ```
 
 Open loop at 1,000 req/s against a server that freezes 200ms every second:
 
 ```
 $ ./run_benchmark.sh 60000 Hello 200 1 open 1000
-Average: 18609 microseconds
-Lowest: 34 microseconds
-Highest: 216461 microseconds
-Median: 274 microseconds
+Average: 18305 microseconds
+Lowest: 32 microseconds
+Highest: 204445 microseconds
+Median: 265 microseconds
 
-99th Percentile: 193120 microseconds
-99.9th Percentile: 203577 microseconds
-99.99th Percentile: 211902 microseconds
-99.999th Percentile: 216461 microseconds
+99th Percentile: 192611 microseconds
+99.9th Percentile: 203376 microseconds
+99.99th Percentile: 204396 microseconds
+99.999th Percentile: 204445 microseconds
 ```
 Every run appends a row to `results/results.csv`.
 
@@ -141,8 +141,8 @@ These bound what the numbers mean. Read them before quoting any figure above.
 - **Single connection, single thread.** One client socket and one request at a time. Real servers face many concurrent connections, and contention between them is not measured here.
 
 - **Open-loop latency includes the generator's own scheduling error.** On a
-  healthy server at 1,000 req/s the open-loop p99 is 4.4ms against closed
-  loop's 41µs. That gap is the client waking late from `sleep_until`, which
+  healthy server at 1,000 req/s the open-loop p99 is 308µs against closed
+  loop's 16µs. That gap is the client waking late from `sleep_until`, which
   macOS delays at millisecond intervals for power management.
 
 - **Percentiles need samples.** A trustworthy p99.9 needs at least 10,000
